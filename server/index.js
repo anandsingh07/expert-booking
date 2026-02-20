@@ -13,14 +13,28 @@ const Expert = require('./models/Expert');
 const app = express();
 const server = http.createServer(app);
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = [
+    'http://localhost:5173',
+    process.env.CLIENT_URL,
+].filter(Boolean);
 
-const io = new Server(server, {
-    cors: { origin: CLIENT_URL, methods: ['GET', 'POST', 'PATCH'] },
-});
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PATCH'],
+    credentials: true,
+};
+
+const io = new Server(server, { cors: corsOptions });
 
 app.set('io', io);
-app.use(cors({ origin: CLIENT_URL }));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/experts', expertRoutes);
